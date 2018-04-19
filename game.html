@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+</head>
+<body>
+    
+
+    <script>
+        //Food，命名新建food.js，以调用
+;(function(window,undefined){
+    function Food(options){
+    options = options||{};
+    this.width = options.width||20;
+    this.height = options.height||20;
+    this.bgColor = options.bgColor||"blue"
+    this.x = options.x||0;
+    this.y = options.y||0;
+}
+    Food.prototype.render = function(target){
+    //创建一个div
+    var div = document.createElement("div");
+    target.appendChild(div);
+    //设置div的一些样式 width height 背景色 left top
+    div.style.width = this.width+"px";
+    div.style.height = this.height+"px";
+    div.style.backgroundColor = this.bgColor;
+    //设置div的left值与top值
+    //this.x是0-800/20之间的随机数
+    this.x = parseInt(Math.random()*target.offsetWidth/this.width);
+    this.y = parseInt(Math.random()*target.offsetHeight/this.height);
+    div.style.left = this.x*this.width+"px";
+    div.style.top = this.y*this.height+"px";
+    div.style.position = "absolute";
+}
+window.Food = Food;
+})(window);
+    
+
+    //蛇部,命名snake.js以调用
+    ;(function(window,undefined){
+        function Snake(options){
+    options = options||{};
+    this.width = options.width ||20;
+    this.height = options.height ||20;
+    this.headColor = options.headColor ||"blue";
+    this.bodyColor = options.bodyColor||"pink";
+    //蛇的核心，蛇是由一个个小方块组成，默认蛇是由三个小方块组成
+    this.body = [
+        {x:2,y:0,bgColor:this.headColor},
+        {x:1,y:0,bgColor:this.bodyColor},
+        {x:0,y:0,bgColor:this.bodyColor}
+    ];
+    this.direction = "right";
+}
+//蛇旋渲染
+Snake.prototype.render = function(target){
+    for(var i = 0;i<this.body.length;i++){
+        var span = document.createElement("span");
+        target.appendChild(span);
+        span.style.width = this.width+"px";
+        span.style.height = this.height+"px";
+        span.style.backgroundColor = this.body[i].bgColor;
+        span.style.position = "absolute";
+        span.style.left = this.body[i].x*this.width+"px";
+        span.style.top = this.body[i].y*this.height+"px";
+    }
+}
+//蛇部移动
+Snake.prototype.move = function(target,food){
+//移动的思路：
+    //1. 移动蛇的身体
+    //2. 根据方向移动蛇头
+    //3. 删除整条蛇
+    //4. 重新渲染这条蛇
+    for (var i = this.body.length-1;i>0;i--){//控制蛇尾的变化
+    //蛇尾开始变为上一个块儿，可以不用记录上一个块儿的位置，更加方便，蛇尾是数组的第一个值
+    this.body[i].x = this.body[i-1].x;
+    this.body[i].y = this.body[i-1].y;
+    }
+    switch(this.direction){//控制蛇头的方向和变化
+    //记录一个方向条件，判断，方向的的变化控制x的增减或y,改蛇头
+        case "right":
+        this.body[0].x++;
+        break;
+        case "left":
+        this.body[0].x--;
+        break;
+        case "top":
+        this.body[0].y--;
+        break;
+        case "bottom":
+        this.body[0].y++;
+        break;
+    }
+        var head = this.body[0];
+        var last =this.body[this.body.length - 1];
+    //用于蛇的身体加长，吃food，改变蛇的自身
+    //1. 判断蛇头的位置与食物的位置是否重合。
+    //2. 把移动前的那个蛇尾位置push到body中，添加蛇尾的思想
+    //3. 把原先的食物删除
+    //4. 重新渲染一个新的食物
+     if(head.x === food.x && head.y === food.y){
+            this.body.push({
+                x:last.x,
+                y:last.y,
+                bgColor:this.bodyColor
+            });
+        //删除食物，让食物重新渲染
+        var div = target.querySelector("div");
+        target.removeChild(div);
+        food.render(target);
+        }
+
+    //去除所有的span标签
+    var spans =target.querySelectorAll("span");
+    for(var i = 0;i < spans.length;i++){
+    target.removeChild(spans[i]);
+    }
+    //删除之后重新显现
+    this.render(target);
+}
+    window.Snake = Snake;
+    })(window);
+
+
+    //游戏对象封装,命名Game.js以调用
+;(function(window,undefined){
+    function Game(target){
+    this.target = target;
+    this.snake = new Snake();
+    this.food = new Food();
+    //初始化游戏
+    this.init();
+}
+Game.prototype.init = function(){
+    //渲染蛇和食物
+    this.snake.render(this.target);
+    this.food.render(this.target);
+    var that = this;
+    //由于在下面的函数中要使用当前函数中的this
+    //但是下面的函数中有自己的this，如果直接用this，是访问不到我们这个函数中的this的
+    //所以我们声明一个新的变量that 将当前函数中的this赋值给这个that
+    //that和this的值就是相同的了
+    //在下面的函数中我们就可以使用that来访问到当前函数中的this了！
+        //onkeyup事件只能给有焦点的东西注册，或者是document
+        //document.onkeyup = function (e) {
+        //console.log(e.keyCode);可以打印出来按键的code字符
+       //}
+     document.onkeyup = function(e){
+         switch(e.keyCode){
+             case 37://控制左键
+             if(that.snake.direction != "right"){
+                 that.snake.direction = "left"
+             }
+             break;
+             //后面三个控制方向一样
+               case 38://控制上键
+             if(that.snake.direction != "bottom"){
+                 that.snake.direction = "top"
+             }
+             break;  case 39://控制右键
+             if(that.snake.direction != "left"){
+                 that.snake.direction = "right"
+             }
+             break;  case 40://控制下键
+             if(that.snake.direction != "top"){
+                 that.snake.direction = "bottom"
+             }
+             break;
+         }
+     }
+}
+var timer;
+Game.prototype.start = function(){
+    var that = this;//that存储外部this;
+    timer = setInterval(function(){
+    //在定时器中this是指的window对象
+        that.snake.move(that.target,that.food);
+        //撞墙的逻辑限制，如果蛇头的位置超出了地图，则说明暂停，停止定时器
+        var head = that.snake.body[0];//蛇头
+        if(head.x<0||head.x>that.target.offsetWidth/that.snake.width-1||head.y<0||head.y>that.target.offsetHeight/that.snake.height-1){
+            clearInterval(timer);
+            alert("已撞墙,game over");
+        }
+        //撞身体的判断，判断蛇头和身体位置是否重合，重合即失败
+        for(var i = 3;i < that.snake.body.length;i++){
+            if(head.x === that.snake.body[i].x&& head.y ===that.snake.body[i].y){
+                clearInterval(timer);
+                alert("撞自己，game over");
+            }
+        }
+    },150)
+}
+window.Game = Game;
+})(window);
+    
+
+
+    var map = document.getElementById("map");
+var g = new Game(map);
+g.start();//可以用个按钮装起来，开始。
+//好了，开始玩贪吃蛇吧。
+    </script>
+</body>
+</html>
